@@ -84,57 +84,74 @@ def generate_birthday():
 def create_roblox_account():
     """Créer un compte Roblox avec Selenium"""
     
-    # Générer les infos
-    username = generate_username()
-    password = generate_password()
-    month, day, year = generate_birthday()
-    gender = random.choice(['Male', 'Female'])
-    
-    # Configuration Chrome pour Render (headless)
-    chrome_options = Options()
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--disable-gpu')
-    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    chrome_options.add_experimental_option('useAutomationExtension', False)
-    
-    driver = None
-    
     try:
+        # Générer les infos
+        username = generate_username()
+        password = generate_password()
+        month, day, year = generate_birthday()
+        gender = random.choice(['Male', 'Female'])
+        
+        print(f"\n📝 Generated credentials:")
+        print(f"   Username: {username}")
+        print(f"   Password: {password}")
+        print(f"   Birthday: {month}/{day}/{year}")
+        print(f"   Gender: {gender}")
+        
+        # Configuration Chrome pour Render (headless)
+        print("\n🔧 Configuring Chrome options...")
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
+        
+        driver = None
+        
         # Initialiser le driver
+        print("\n🌐 Starting Chrome WebDriver...")
         driver = webdriver.Chrome(options=chrome_options)
+        
+        print("📄 Navigating to Roblox signup page...")
         driver.get('https://www.roblox.com/CreateAccount')
         
         # Attendre que la page se charge
         wait = WebDriverWait(driver, 10)
         
+        print("⏳ Waiting for form elements...")
+        
         # Remplir le mois
         month_select = wait.until(EC.presence_of_element_located((By.ID, 'MonthDropdown')))
         Select(month_select).select_by_value(str(month))
+        print(f"✅ Month selected: {month}")
         time.sleep(0.5)
         
         # Remplir le jour
         day_select = Select(driver.find_element(By.ID, 'DayDropdown'))
         day_select.select_by_value(str(day))
+        print(f"✅ Day selected: {day}")
         time.sleep(0.5)
         
         # Remplir l'année
         year_select = Select(driver.find_element(By.ID, 'YearDropdown'))
         year_select.select_by_value(str(year))
+        print(f"✅ Year selected: {year}")
         time.sleep(0.5)
         
         # Remplir le username
         username_input = driver.find_element(By.ID, 'signup-username')
         username_input.clear()
         username_input.send_keys(username)
+        print(f"✅ Username entered: {username}")
         time.sleep(0.5)
         
         # Remplir le password
         password_input = driver.find_element(By.ID, 'signup-password')
         password_input.clear()
         password_input.send_keys(password)
+        print("✅ Password entered")
         time.sleep(0.5)
         
         # Sélectionner le genre
@@ -144,23 +161,30 @@ def create_roblox_account():
         else:
             gender_btn = driver.find_element(By.ID, 'FemaleButton')
             gender_btn.click()
+        print(f"✅ Gender selected: {gender}")
         time.sleep(0.5)
         
         # Cliquer sur Sign Up
+        print("🚀 Clicking Sign Up button...")
         signup_btn = driver.find_element(By.ID, 'signup-button')
         signup_btn.click()
         
         # Attendre
+        print("⏳ Waiting for account creation...")
         time.sleep(5)
+        
+        current_url = driver.current_url
+        print(f"🔗 Current URL: {current_url}")
         
         # Fermer le navigateur
         driver.quit()
+        print("✅ Browser closed")
         
         # Sauvegarder dans la base de données
         birthday_str = f"{month:02d}/{day:02d}/{year}"
         save_account(username, password, birthday_str, gender)
         
-        print(f"\n✅ Compte créé: {username}")
+        print(f"\n✅ Account created successfully!")
         
         return {
             'success': True,
@@ -173,7 +197,9 @@ def create_roblox_account():
     except Exception as e:
         if driver:
             driver.quit()
-        print(f"\n❌ Erreur: {str(e)}")
+        print(f"\n❌ Error in create_roblox_account: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {
             'success': False,
             'error': str(e)
@@ -396,17 +422,31 @@ def accounts():
 @app.route('/create', methods=['POST'])
 def create():
     """Créer un compte"""
-    # Vérifier la limite
-    count = get_accounts_count_last_12h()
-    if count >= 5:
+    try:
+        # Vérifier la limite
+        count = get_accounts_count_last_12h()
+        if count >= 5:
+            return jsonify({
+                'success': False,
+                'error': 'Limit reached: 5 accounts per 12 hours'
+            }), 429
+        
+        print("\n🚀 Starting account creation...")
+        
+        # Créer le compte
+        result = create_roblox_account()
+        
+        print(f"\n📊 Result: {result}")
+        
+        return jsonify(result)
+    except Exception as e:
+        print(f"\n❌ ERROR in /create endpoint: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
-            'error': 'Limit reached: 5 accounts per 12 hours'
-        }), 429
-    
-    # Créer le compte
-    result = create_roblox_account()
-    return jsonify(result)
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
     init_db()
