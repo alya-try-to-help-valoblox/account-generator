@@ -26,7 +26,7 @@ RUN CHROMEDRIVER_VERSION=`curl -sS chromedriver.storage.googleapis.com/LATEST_RE
 WORKDIR /app
 
 # Copier les fichiers
-COPY requirements.txt .
+COPY requirements_roblox.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
