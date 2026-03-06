@@ -118,12 +118,32 @@ def create_roblox_account():
         driver.get('https://www.roblox.com/CreateAccount')
         
         # Attendre que la page se charge
-        wait = WebDriverWait(driver, 10)
+        wait = WebDriverWait(driver, 15)
+        
+        print("⏳ Waiting for page to load...")
+        time.sleep(3)
+        
+        # Prendre une capture d'écran pour déboguer
+        driver.save_screenshot('/tmp/roblox_page.png')
+        print("📸 Screenshot saved to /tmp/roblox_page.png")
+        
+        # Afficher le HTML de la page pour déboguer
+        print("\n🔍 Page source preview:")
+        print(driver.page_source[:1000])
         
         print("⏳ Waiting for form elements...")
         
-        # Remplir le mois
-        month_select = wait.until(EC.presence_of_element_located((By.ID, 'MonthDropdown')))
+        # Essayer de trouver les dropdowns avec différents sélecteurs
+        try:
+            month_select = wait.until(EC.presence_of_element_located((By.ID, 'MonthDropdown')))
+            print("✅ Found MonthDropdown by ID")
+        except:
+            print("❌ MonthDropdown not found by ID, trying CSS selector...")
+            month_select = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'select[name="birthdayMonth"]')))
+        
+        # Afficher les options disponibles
+        print(f"📋 Available month options: {[opt.get_attribute('value') for opt in month_select.find_elements(By.TAG_NAME, 'option')]}")
+        
         Select(month_select).select_by_value(str(month))
         print(f"✅ Month selected: {month}")
         time.sleep(0.5)
